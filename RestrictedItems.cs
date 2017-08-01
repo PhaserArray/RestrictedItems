@@ -144,7 +144,17 @@ namespace PhaserArray.RestrictedItems
 				{
 					foreach (var PermissionGroup in AllRestrictedItems[ID])
 					{
-						if (player.HasPermissions(PermissionGroup))
+						// I tried to use HasPermissions, but that seemed to
+						// return true if one of the perms was true, not all.
+						var hasPerm = true;
+						foreach (var Permission in PermissionGroup)
+						{
+							if (!player.HasPermission(Permission))
+							{
+								hasPerm = false;
+							}
+						}
+						if (hasPerm)
 						{
 							return true;
 						}
