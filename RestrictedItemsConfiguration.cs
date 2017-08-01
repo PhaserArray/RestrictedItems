@@ -19,7 +19,7 @@ namespace PhaserArray.RestrictedItems
 		{
 			UnlistedAreRestricted = false;
 
-			CheckInterval = 5.0f;
+			CheckInterval = 1.0f;
 
 			ExemptPermission = "restricteditems.exempt";
 
