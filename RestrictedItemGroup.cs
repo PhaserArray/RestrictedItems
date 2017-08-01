@@ -7,10 +7,10 @@ namespace PhaserArray.RestrictedItems
 	{
 		public RestrictedItemGroup() { }
 
-		public RestrictedItemGroup(List<ushort> itemIDs, List<RestrictedItemGroupPermissions> permissionGroups)
+		public RestrictedItemGroup(List<ushort> IDs, List<RestrictedItemGroupPermissions> PermissionGroups)
 		{
-			IDs = itemIDs;
-			PermissionGroups = permissionGroups;
+			this.IDs = IDs;
+			this.PermissionGroups = PermissionGroups;
 		}
 
 		[XmlArrayItem(ElementName = "ID")]
@@ -24,9 +24,9 @@ namespace PhaserArray.RestrictedItems
 	{
 		public RestrictedItemGroupPermissions() { }
 
-		public RestrictedItemGroupPermissions(List<string> permissions)
+		public RestrictedItemGroupPermissions(List<string> Permissions)
 		{
-			Permissions = permissions;
+			this.Permissions = Permissions;
 		}
 
 		[XmlElement(ElementName = "Permission")]

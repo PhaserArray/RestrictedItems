@@ -6,13 +6,23 @@ namespace PhaserArray.RestrictedItems
 {
 	public class RestrictedItemsConfiguration : IRocketPluginConfiguration
 	{
-		public bool AdminsExempt = false;
+		public bool UnlistedAreRestricted;
+
+		public float CheckInterval;
+
+		public string ExemptPermission;
 
 		[XmlArrayItem(ElementName = "RestrictedItemGroup")]
 		public List<RestrictedItemGroup> RestrictedItemGroups;
 			
 		public void LoadDefaults()
 		{
+			UnlistedAreRestricted = false;
+
+			CheckInterval = 5.0f;
+
+			ExemptPermission = "restricteditems.exempt";
+
 			RestrictedItemGroups = new List<RestrictedItemGroup>()
 			{
 				new RestrictedItemGroup(
@@ -26,14 +36,14 @@ namespace PhaserArray.RestrictedItems
 						new RestrictedItemGroupPermissions(
 							new List<string>
 							{
-								"RestrictedItems.Shadowstalker"
+								"restricteditems.shadowstalker"
 							}
 						),
 						new RestrictedItemGroupPermissions(
 							new List<string>
 							{
-								"RestrictedItems.Railguns",
-								"RestrictedItems.Weapons"
+								"restricteditems.railguns",
+								"restricteditems.weapons"
 							}
 						)
 					}
@@ -51,8 +61,8 @@ namespace PhaserArray.RestrictedItems
 						new RestrictedItemGroupPermissions(
 							new List<string>
 							{
-								"RestrictedItems.FishingRods",
-								"RestrictedItems.Tools"
+								"restricteditems.fishingrods",
+								"restricteditems.tools"
 							}
 						)
 					}
@@ -69,15 +79,15 @@ namespace PhaserArray.RestrictedItems
 						new RestrictedItemGroupPermissions(
 							new List<string>
 							{
-								"RestrictedItems.Railguns",
-								"RestrictedItems.Weapons",
-								"RestrictedItems.Special"
+								"restricteditems.railguns",
+								"restricteditems.weapons",
+								"restricteditems.special"
 							}
 						),
 						new RestrictedItemGroupPermissions(
 							new List<string>
 							{
-								"RestrictedItems.ShadowstalkerMkII"
+								"restricteditems.shadowstalkermkii"
 							}
 						)
 					}
@@ -92,35 +102,15 @@ namespace PhaserArray.RestrictedItems
 						new RestrictedItemGroupPermissions(
 							new List<string>
 							{
-								"RestrictedItems.FishingRods",
-								"RestrictedItems.Tools",
-								"RestrictedItems.Special"
+								"restricteditems.fishingrods",
+								"restricteditems.tools",
+								"restricteditems.special"
 							}
 						),
 						new RestrictedItemGroupPermissions(
 							new List<string>
 							{
-								"RestrictedItems.UpgradedFishingRod"
-							}
-						)
-					}
-				),
-				new RestrictedItemGroup(
-					new List<ushort>()
-					{
-						300,
-						302,
-						1432,
-						1441,
-						1442,
-						1443
-					},
-					new List<RestrictedItemGroupPermissions>()
-					{
-						new RestrictedItemGroupPermissions(
-							new List<string>
-							{
-								"RestrictedItems.Everything"
+								"restricteditems.upgradedfishingrod"
 							}
 						)
 					}

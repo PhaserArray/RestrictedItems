@@ -1,25 +1,22 @@
 ﻿using Rocket.API;
-using Rocket.API.Serialisation;
 using Rocket.API.Collections;
-using Rocket.Core;
 using Rocket.Core.Logging;
 using Rocket.Core.Plugins;
-using Rocket.Unturned.Enumerations;
-using Rocket.Unturned.Events;
+using Rocket.Unturned.Items;
+using Rocket.Unturned.Chat;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Rocket.Core.Permissions;
+using UnityEngine;
 
 namespace PhaserArray.RestrictedItems
 {
-    public class RestrictedItems : RocketPlugin<RestrictedItemsConfiguration>
+	public class RestrictedItems : RocketPlugin<RestrictedItemsConfiguration>
 	{
 		private static RestrictedItems Instance;
 		private static RestrictedItemsConfiguration Config;
+
+		private float LastCheck;
 
 		private Dictionary<ushort, List<List<string>>> AllRestrictedItems;
 
@@ -28,9 +25,11 @@ namespace PhaserArray.RestrictedItems
 			Instance = this;
 			Config = Instance.Configuration.Instance;
 
+			LastCheck = Time.time;
+
 			AllRestrictedItems = new Dictionary<ushort, List<List<string>>>();
 
-			// Loads the config into a nicely indexable dictionary.
+			// Loads the config into a nicely indexable lowercase dictionary.
 			// I tried to do it without 3 nested loops and...
 			// it worked but it encountered some weird behavior
 			// and this didn't so I'm going with this.
@@ -43,12 +42,12 @@ namespace PhaserArray.RestrictedItems
 					{
 						if (AllRestrictedItems.ContainsKey(ID))
 						{
-							AllRestrictedItems[ID].Add(PermissionGroup.Permissions);
+							AllRestrictedItems[ID].Add(PermissionGroup.Permissions.ConvertAll(s => s.ToLower()));
 						}
 						else
 						{
 							var toBeAdded = new List<List<string>>();
-							toBeAdded.Add(PermissionGroup.Permissions);
+							toBeAdded.Add(PermissionGroup.Permissions.ConvertAll(s => s.ToLower()));
 							AllRestrictedItems.Add(ID, toBeAdded);
 						}
 					}
@@ -56,38 +55,135 @@ namespace PhaserArray.RestrictedItems
 			}
 			Logger.Log("Loaded " + AllRestrictedItems.Count.ToString() + " restricted items!");
 
-			Logger.Log("=====");
-			foreach (var item in AllRestrictedItems)
-			{
-				Logger.Log(item.Key.ToString());
-				Logger.Log(item.Value.Count().ToString());
-				Logger.Log(" -----");
-				Logger.Log("  ---");
-				foreach (var permissionGroup in item.Value)
-				{
-					foreach (var perm in permissionGroup)
-					{
-						Logger.Log("   " + perm);
-					}
-					Logger.Log("  ---");
-				}
-				Logger.Log(" -----");
-				Logger.Log("=====");
-			}
-
-			UnturnedPlayerEvents.OnPlayerInventoryAdded += OnPlayerInventoryAdded;
 			Logger.Log("Plugin Loaded!");
 		}
-
-		public void OnPlayerInventoryAdded(UnturnedPlayer player, InventoryGroup inventoryGroup, byte inventoryIndex, ItemJar P)
+		
+		public void Update()
 		{
-			Logger.Log("InvGrp " + inventoryGroup.ToString());
-			Logger.Log("InvIndx " + inventoryIndex.ToString());
-			Logger.Log("P size x " + P.size_x.ToString());
-			Logger.Log("P size y " + P.size_y.ToString());
-			Logger.Log("P x " + P.x.ToString());
-			Logger.Log("P y " + P.y.ToString());
-			Logger.Log("P item " + P.item.ToString());
+			if (Level.isLoaded && Provider.clients.Count > 0)
+			{
+				if (Time.time - LastCheck > Config.CheckInterval)
+				{
+					LastCheck = Time.time;
+					foreach (var client in Provider.clients)
+					{
+						if (!UnturnedPlayer.FromSteamPlayer(client).IsAdmin && !UnturnedPlayer.FromSteamPlayer(client).HasPermission(Config.ExemptPermission))
+						{
+							CheckInventory(client.player);
+						}
+					}
+				}
+			}
+		}
+
+		public void CheckInventory(Player player)
+		{
+			var uPlayer = UnturnedPlayer.FromPlayer(player);
+
+			// This might have issues if the clothing item isn't there or something.
+			try
+			{
+				if (!CanUseItem(uPlayer, player.clothing.backpack))
+				{
+					player.clothing.askWearBackpack(0, 0, new byte[0], true);
+				}
+				if (!CanUseItem(uPlayer, player.clothing.vest))
+				{
+					player.clothing.askWearVest(0, 0, new byte[0], true);
+				}
+				if (!CanUseItem(uPlayer, player.clothing.shirt))
+				{
+					player.clothing.askWearShirt(0, 0, new byte[0], true);
+				}
+				if (!CanUseItem(uPlayer, player.clothing.pants))
+				{
+					player.clothing.askWearPants(0, 0, new byte[0], true);
+				}
+				if (!CanUseItem(uPlayer, player.clothing.hat))
+				{
+					player.clothing.askWearHat(0, 0, new byte[0], true);
+				}
+				if (!CanUseItem(uPlayer, player.clothing.mask))
+				{
+					player.clothing.askWearMask(0, 0, new byte[0], true);
+				}
+				if (!CanUseItem(uPlayer, player.clothing.glasses))
+				{
+					player.clothing.askWearGlasses(0, 0, new byte[0], true);
+				}
+			}
+			catch { }
+
+			// This pretty much always causes a nullpointer or something.
+			try
+			{
+				for (byte page = 0; page < PlayerInventory.PAGES; page++)
+				{
+					for (byte index = 0; index < player.inventory.getItemCount(page); index++)
+					{
+						if (!CanUseItem(uPlayer, player.inventory.getItem(page, index).item.id))
+						{
+							UnturnedChat.Say(uPlayer, Instance.Translate("restricteditem_removed", UnturnedItems.GetItemAssetById(player.inventory.getItem(page, index).item.id).itemName), Color.red);
+							player.inventory.removeItem(page, index);
+						}
+					}
+				}
+			}
+			catch { }
+		}
+
+		public bool CanUseItem(UnturnedPlayer player, ushort ID)
+		{
+			if (IsRestrictedItem(ID))
+			{
+				if (!AllRestrictedItems.ContainsKey(ID))
+				{
+					return false;
+				}
+				else
+				{
+					foreach (var PermissionGroup in AllRestrictedItems[ID])
+					{
+						if (player.HasPermissions(PermissionGroup))
+						{
+							return true;
+						}
+					}
+				}
+			}
+			else
+			{
+				return true;
+			}
+			return false;
+		}
+
+		public bool IsRestrictedItem(ushort ID)
+		{
+			if (ID == 0)
+			{
+				return false;
+			}
+			if (Config.UnlistedAreRestricted)
+			{
+				return true;
+			}
+			if (AllRestrictedItems.ContainsKey(ID))
+			{
+				return true;
+			}
+			return false;	
+		}
+
+		public override TranslationList DefaultTranslations
+		{
+			get
+			{
+				return new TranslationList()
+				{
+					{"restricteditem_removed", "Item not permitted: {0}"}
+				};
+			}
 		}
 	}
 }
