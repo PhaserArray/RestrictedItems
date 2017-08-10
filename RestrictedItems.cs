@@ -79,10 +79,9 @@ namespace PhaserArray.RestrictedItems
 		public void CheckInventory(Player player)
 		{
 			var uPlayer = UnturnedPlayer.FromPlayer(player);
-
-			// This might have issues if the clothing item isn't there or something.
 			try
 			{
+				// This might have issues if the clothing item isn't there or something.
 				if (!CanUseItem(uPlayer, player.clothing.backpack))
 				{
 					player.clothing.askWearBackpack(0, 0, new byte[0], true);
@@ -111,12 +110,8 @@ namespace PhaserArray.RestrictedItems
 				{
 					player.clothing.askWearGlasses(0, 0, new byte[0], true);
 				}
-			}
-			catch { }
 
-			// This pretty much always causes a nullpointer or something.
-			try
-			{
+				// This pretty much always causes a nullpointer or something.
 				for (byte page = 0; page < PlayerInventory.PAGES; page++)
 				{
 					for (byte index = 0; index < player.inventory.getItemCount(page); index++)
