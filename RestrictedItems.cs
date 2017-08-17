@@ -57,6 +57,18 @@ namespace PhaserArray.RestrictedItems
 
 			Logger.Log("Loaded " + AllRestrictedItems.Count.ToString() + " restricted items!");
 			Logger.Log("Restricted items " + version + " Loaded!");
+
+			if (Level.isLoaded && Provider.clients.Count > 0)
+			{
+				foreach (var client in Provider.clients)
+				{
+					var player = UnturnedPlayer.FromSteamPlayer(client);
+					if (!player.IsAdmin && !player.HasPermission(Config.ExemptPermission))
+					{
+						CheckInventory(player);
+					}
+				}
+			}
 		}
 		
 		protected override void Unload()
