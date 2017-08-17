@@ -8,31 +8,28 @@ using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System.Collections.Generic;
 using UnityEngine;
+using Rocket.Unturned.Events;
+using Rocket.Unturned.Permissions;
+using System;
+using Rocket.Unturned;
 
 namespace PhaserArray.RestrictedItems
 {
 	public class RestrictedItems : RocketPlugin<RestrictedItemsConfiguration>
 	{
-		private static RestrictedItems Instance;
 		private static RestrictedItemsConfiguration Config;
-
 		private float LastCheck;
-
+		private HashSet<UnturnedPlayer> CheckQueue;
 		private Dictionary<ushort, List<List<string>>> AllRestrictedItems;
 
 		protected override void Load()
 		{
-			Instance = this;
-			Config = Instance.Configuration.Instance;
-
+			Config = Configuration.Instance;
 			LastCheck = Time.time;
-
+			CheckQueue = new HashSet<UnturnedPlayer>();
 			AllRestrictedItems = new Dictionary<ushort, List<List<string>>>();
 
 			// Loads the config into a nicely indexable lowercase dictionary.
-			// I tried to do it without 3 nested loops and...
-			// it worked but it encountered some weird behavior
-			// and this didn't so I'm going with this.
 			Logger.Log("Loading restricted items...");
 			foreach (var RestrictedItemGroup in Config.RestrictedItemGroups)
 			{
@@ -53,32 +50,76 @@ namespace PhaserArray.RestrictedItems
 					}
 				}
 			}
-			Logger.Log("Loaded " + AllRestrictedItems.Count.ToString() + " restricted items!");
 
+			U.Events.OnPlayerConnected += OnPlayerConnected;
+			UnturnedPlayerEvents.OnPlayerInventoryAdded += OnPlayerInventoryAdded;
+			U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
+
+			Logger.Log("Loaded " + AllRestrictedItems.Count.ToString() + " restricted items!");
 			Logger.Log("Plugin Loaded!");
 		}
-		
-		public void Update()
+
+		protected override void Unload()
 		{
-			if (Level.isLoaded && Provider.clients.Count > 0)
+			U.Events.OnPlayerConnected -= OnPlayerConnected;
+			UnturnedPlayerEvents.OnPlayerInventoryAdded -= OnPlayerInventoryAdded;
+			U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
+		}
+
+		public void QueuePlayer(UnturnedPlayer player)
+		{
+			if (!player.IsAdmin && !player.HasPermission(Config.ExemptPermission))
 			{
-				if (Time.time - LastCheck > Config.CheckInterval)
-				{
-					LastCheck = Time.time;
-					foreach (var client in Provider.clients)
-					{
-						if (!UnturnedPlayer.FromSteamPlayer(client).IsAdmin && !UnturnedPlayer.FromSteamPlayer(client).HasPermission(Config.ExemptPermission))
-						{
-							CheckInventory(client.player);
-						}
-					}
-				}
+				CheckQueue.Add(player);
 			}
 		}
 
-		public void CheckInventory(Player player)
+		private void OnPlayerConnected(UnturnedPlayer player)
 		{
-			var uPlayer = UnturnedPlayer.FromPlayer(player);
+			QueuePlayer(player);
+		}
+
+		private void OnPlayerInventoryAdded(UnturnedPlayer player, Rocket.Unturned.Enumerations.InventoryGroup inventoryGroup, byte inventoryIndex, ItemJar P)
+		{
+			// You can't just remove the item here because that can cause issues.
+			QueuePlayer(player);
+		}
+
+		private void OnPlayerDisconnected(UnturnedPlayer player)
+		{
+			CheckQueue.Remove(player);
+		}
+
+		public void Update()
+		{
+			if (Time.time - LastCheck > Config.CheckInterval)
+			{
+				LastCheck = Time.time;
+				foreach (var QueuedPlayer in CheckQueue)
+				{
+					CheckInventory(QueuedPlayer);
+					CheckQueue.Remove(QueuedPlayer);
+				}
+			}
+			//if (Level.isLoaded && Provider.clients.Count > 0)
+			//{
+			//	if (Time.time - LastCheck > Config.CheckInterval)
+			//	{
+			//		LastCheck = Time.time;
+			//		foreach (var client in Provider.clients)
+			//		{
+			//			if (!UnturnedPlayer.FromSteamPlayer(client).IsAdmin && !UnturnedPlayer.FromSteamPlayer(client).HasPermission(Config.ExemptPermission))
+			//			{
+			//				CheckInventory(client.player);
+			//			}
+			//		}
+			//	}
+			//}
+		}
+
+		public void CheckInventory(UnturnedPlayer uPlayer)
+		{
+			var player = uPlayer.Player;
 			try
 			{
 				// This might have issues if the clothing item isn't there or something.
@@ -118,7 +159,7 @@ namespace PhaserArray.RestrictedItems
 					{
 						if (!CanUseItem(uPlayer, player.inventory.getItem(page, index).item.id))
 						{
-							UnturnedChat.Say(uPlayer, Instance.Translate("restricteditem_removed", UnturnedItems.GetItemAssetById(player.inventory.getItem(page, index).item.id).itemName), Color.red);
+							UnturnedChat.Say(uPlayer, Translate("restricteditem_removed", UnturnedItems.GetItemAssetById(player.inventory.getItem(page, index).item.id).itemName), Color.red);
 							player.inventory.removeItem(page, index);
 						}
 					}
