@@ -7,9 +7,6 @@ namespace PhaserArray.RestrictedItems
 	public class RestrictedItemsConfiguration : IRocketPluginConfiguration
 	{
 		public bool UnlistedAreRestricted;
-
-		public float CheckInterval;
-
 		public string ExemptPermission;
 
 		[XmlArrayItem(ElementName = "RestrictedItemGroup")]
@@ -18,9 +15,6 @@ namespace PhaserArray.RestrictedItems
 		public void LoadDefaults()
 		{
 			UnlistedAreRestricted = false;
-
-			CheckInterval = 15.0f;
-
 			ExemptPermission = "restricteditems.exempt";
 
 			RestrictedItemGroups = new List<RestrictedItemGroup>()
