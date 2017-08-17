@@ -19,6 +19,9 @@ namespace PhaserArray.RestrictedItems
 {
 	public class RestrictedItems : RocketPlugin<RestrictedItemsConfiguration>
 	{
+
+		private const string version = "v1.1";
+
 		private static RestrictedItemsConfiguration Config;
 		private Dictionary<ushort, List<List<string>>> AllRestrictedItems;
 
@@ -54,7 +57,7 @@ namespace PhaserArray.RestrictedItems
 			UnturnedPlayerEvents.OnPlayerWear += OnPlayerWear;
 
 			Logger.Log("Loaded " + AllRestrictedItems.Count.ToString() + " restricted items!");
-			Logger.Log("Plugin Loaded!");
+			Logger.Log("Restricted items " + version + " Loaded!");
 		}
 		
 		protected override void Unload()
