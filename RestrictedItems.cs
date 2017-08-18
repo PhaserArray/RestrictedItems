@@ -179,7 +179,6 @@ namespace PhaserArray.RestrictedItems
 			
 			for (byte page = 0; page < PlayerInventory.PAGES-1; page++)
 			{
-				// This should check for if the page exists.
 				for (byte index = player.inventory.getItemCount(page); index-- > 0;)
 				{
 					if (!CanUseItem(uPlayer, player.inventory.getItem(page, index).item.id))
