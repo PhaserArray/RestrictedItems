@@ -18,16 +18,17 @@ namespace PhaserArray.RestrictedItems
 {
 	public class RestrictedItems : RocketPlugin<RestrictedItemsConfiguration>
 	{
+		private const string version = "v1.2";
 
-		private const string version = "v1.1";
-
-		private static RestrictedItemsConfiguration Config;
+		private RestrictedItemsConfiguration Config;
 		private Dictionary<ushort, List<List<string>>> AllRestrictedItems;
+		private List<RestrictedItemsQueueItem> RestrictedItemsQueue;
 
 		protected override void Load()
 		{
 			Config = Configuration.Instance;
 			AllRestrictedItems = new Dictionary<ushort, List<List<string>>>();
+			RestrictedItemsQueue = new List<RestrictedItemsQueueItem>();
 
 			// Loads the config into a nicely indexable lowercase dictionary.
 			Logger.Log("Loading restricted items...");
@@ -66,10 +67,38 @@ namespace PhaserArray.RestrictedItems
 			UnturnedPlayerEvents.OnPlayerWear -= OnPlayerWear;
 		}
 
+		private void Update()
+		{
+			if (RestrictedItemsQueue.Count > 0)
+			{
+				foreach (var restrictedItem in RestrictedItemsQueue)
+				{
+					var index = restrictedItem.player.Inventory.getIndex(restrictedItem.page, restrictedItem.itemJar.x, restrictedItem.itemJar.y);
+					if (restrictedItem.player.Inventory.getItem(restrictedItem.page, index) != null)
+					{
+						if (restrictedItem.player.Inventory.getItem(restrictedItem.page, index).item.id == restrictedItem.itemJar.item.id)
+						{
+							restrictedItem.player.Inventory.removeItem(restrictedItem.page, index);
+							UnturnedChat.Say(restrictedItem.player, Translate("restricteditem_removed", UnturnedItems.GetItemAssetById(restrictedItem.itemJar.item.id).itemName), Color.red);
+						}
+					}
+				}
+				RestrictedItemsQueue.Clear();
+			}
+		}
+
 		private void OnPlayerConnected(UnturnedPlayer player)
 		{
-			// Wait for player to fully load in.
 			CheckInventory(player);
+		}
+
+		private void OnPlayerInventoryAdded(UnturnedPlayer player, InventoryGroup inventoryGroup, byte inventoryIndex, ItemJar itemJar)
+		{
+			if (!CanUseItem(player, itemJar.item.id))
+			{
+				// A queue seems to avoid a lot of the issues I was having when I tried to remove the items here.
+				RestrictedItemsQueue.Add(new RestrictedItemsQueueItem(player, Convert.ToByte(inventoryGroup), itemJar));
+			}
 		}
 
 		private void OnPlayerWear(UnturnedPlayer player, UnturnedPlayerEvents.Wearables wear, ushort id, byte? quality)
@@ -79,112 +108,82 @@ namespace PhaserArray.RestrictedItems
 				new Thread(() =>
 				{
 					Thread.CurrentThread.IsBackground = true;
-					// Delay is necessary, if you unequip immediately
-					// the item will not get unequipped at all.
-					Thread.Sleep(2000);
-					try
+					// Okay so this could also work without the delay as long as it is in another thread?
+					// No clue why this is the case, but I'll leave the delay in for safety?
+					Thread.Sleep(10);
+
+					var clothing = player.Player.clothing;
+					switch (wear)
 					{
-						switch (wear)
-						{
-							case UnturnedPlayerEvents.Wearables.Hat:
-								player.Player.clothing.askWearHat(0, 0, new byte[0], true);
-								break;
-							case UnturnedPlayerEvents.Wearables.Mask:
-								player.Player.clothing.askWearMask(0, 0, new byte[0], true);
-								break;
-							case UnturnedPlayerEvents.Wearables.Vest:
-								player.Player.clothing.askWearVest(0, 0, new byte[0], true);
-								break;
-							case UnturnedPlayerEvents.Wearables.Pants:
-								player.Player.clothing.askWearPants(0, 0, new byte[0], true);
-								break;
-							case UnturnedPlayerEvents.Wearables.Shirt:
-								player.Player.clothing.askWearShirt(0, 0, new byte[0], true);
-								break;
-							case UnturnedPlayerEvents.Wearables.Glasses:
-								player.Player.clothing.askWearGlasses(0, 0, new byte[0], true);
-								break;
-							case UnturnedPlayerEvents.Wearables.Backpack:
-								player.Player.clothing.askWearBackpack(0, 0, new byte[0], true);
-								break;
-							default:
-								break;
-						}
+						case UnturnedPlayerEvents.Wearables.Hat:
+							clothing.askWearHat(0, 0, new byte[0], true);
+							break;
+						case UnturnedPlayerEvents.Wearables.Mask:
+							clothing.askWearMask(0, 0, new byte[0], true);
+							break;
+						case UnturnedPlayerEvents.Wearables.Vest:
+							clothing.askWearVest(0, 0, new byte[0], true);
+							break;
+						case UnturnedPlayerEvents.Wearables.Pants:
+							clothing.askWearPants(0, 0, new byte[0], true);
+							break;
+						case UnturnedPlayerEvents.Wearables.Shirt:
+							clothing.askWearShirt(0, 0, new byte[0], true);
+							break;
+						case UnturnedPlayerEvents.Wearables.Glasses:
+							clothing.askWearGlasses(0, 0, new byte[0], true);
+							break;
+						case UnturnedPlayerEvents.Wearables.Backpack:
+							clothing.askWearBackpack(0, 0, new byte[0], true);
+							break;
+						default:
+							break;
 					}
-					catch { }
 				}).Start();
 			}
 		}
 
-
-		private void OnPlayerInventoryAdded(UnturnedPlayer player, InventoryGroup inventoryGroup, byte inventoryIndex, ItemJar P)
+		public void CheckInventory(UnturnedPlayer player)
 		{
-			if (!CanUseItem(player, P.item.id))
+			var clothing = player.Player.clothing;
+			
+			if (!CanUseItem(player, clothing.backpack))
 			{
-				if (player.Player.equipment.itemID == P.item.id)
-				{
-					player.Player.equipment.dequip();
-				}
-				new Thread(() =>
-				{
-					Thread.CurrentThread.IsBackground = true;
-					// So this delay is needed between dequipping the
-					// equipped tool and removing it to reduce weird errors.
-					// It also seems to reduce weird graphical glitches
-					// in the inventory when removing stuff;
-					Thread.Sleep(2000);
-					try
-					{
-						// Oddly enough the inventoryIndex is less reliable than the getIndex version.
-						player.Player.inventory.removeItem(Convert.ToByte(inventoryGroup), player.Player.inventory.getIndex(Convert.ToByte(inventoryGroup), P.x, P.y));
-						UnturnedChat.Say(player, Translate("restricteditem_removed", UnturnedItems.GetItemAssetById(P.item.id).itemName), Color.red);
-					}
-					catch { }
-				}).Start();
+				clothing.askWearBackpack(0, 0, new byte[0], true);
 			}
-		}
+			if (!CanUseItem(player, clothing.vest))
+			{
+				clothing.askWearVest(0, 0, new byte[0], true);
+			}
+			if (!CanUseItem(player, clothing.shirt))
+			{
+				clothing.askWearShirt(0, 0, new byte[0], true);
+			}
+			if (!CanUseItem(player, clothing.pants))
+			{
+				clothing.askWearPants(0, 0, new byte[0], true);
+			}
+			if (!CanUseItem(player, clothing.hat))
+			{
+				clothing.askWearHat(0, 0, new byte[0], true);
+			}
+			if (!CanUseItem(player, clothing.mask))
+			{
+				clothing.askWearMask(0, 0, new byte[0], true);
+			}
+			if (!CanUseItem(player, clothing.glasses))
+			{
+				clothing.askWearGlasses(0, 0, new byte[0], true);
+			}
 
-		public void CheckInventory(UnturnedPlayer uPlayer)
-		{
-			var player = uPlayer.Player;
-			
-			if (!CanUseItem(uPlayer, player.clothing.backpack))
+			for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
 			{
-				player.clothing.askWearBackpack(0, 0, new byte[0], true);
-			}
-			if (!CanUseItem(uPlayer, player.clothing.vest))
-			{
-				player.clothing.askWearVest(0, 0, new byte[0], true);
-			}
-			if (!CanUseItem(uPlayer, player.clothing.shirt))
-			{
-				player.clothing.askWearShirt(0, 0, new byte[0], true);
-			}
-			if (!CanUseItem(uPlayer, player.clothing.pants))
-			{
-				player.clothing.askWearPants(0, 0, new byte[0], true);
-			}
-			if (!CanUseItem(uPlayer, player.clothing.hat))
-			{
-				player.clothing.askWearHat(0, 0, new byte[0], true);
-			}
-			if (!CanUseItem(uPlayer, player.clothing.mask))
-			{
-				player.clothing.askWearMask(0, 0, new byte[0], true);
-			}
-			if (!CanUseItem(uPlayer, player.clothing.glasses))
-			{
-				player.clothing.askWearGlasses(0, 0, new byte[0], true);
-			}
-			
-			for (byte page = 0; page < PlayerInventory.PAGES-1; page++)
-			{
-				for (byte index = player.inventory.getItemCount(page); index-- > 0;)
+				for (byte index = player.Inventory.getItemCount(page); index-- > 0;)
 				{
-					if (!CanUseItem(uPlayer, player.inventory.getItem(page, index).item.id))
+					if (!CanUseItem(player, player.Inventory.getItem(page, index).item.id))
 					{
-						UnturnedChat.Say(uPlayer, Translate("restricteditem_removed", UnturnedItems.GetItemAssetById(player.inventory.getItem(page, index).item.id).itemName), Color.red);
-						player.inventory.removeItem(page, index);
+						player.Inventory.removeItem(page, index);
+						UnturnedChat.Say(player, Translate("restricteditem_removed", UnturnedItems.GetItemAssetById(player.Inventory.getItem(page, index).item.id).itemName, Color.red));
 					}
 				}
 			}
