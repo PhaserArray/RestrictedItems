@@ -191,7 +191,7 @@ namespace PhaserArray.RestrictedItems
 		}
 
 		public bool CanUseItem(UnturnedPlayer player, ushort ID)
-		{ 
+		{
 			if (player.IsAdmin || player.HasPermission(Config.ExemptPermission))
 			{
 				return true;
