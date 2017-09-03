@@ -89,6 +89,7 @@ namespace PhaserArray.RestrictedItems
 
 		private void OnPlayerConnected(UnturnedPlayer player)
 		{
+			// There is one minor graphical issue, sometimes the item gets removed but it still appears in inventory as a ghost item. ¯\_(ツ)_/¯
 			CheckInventory(player);
 		}
 
@@ -146,7 +147,7 @@ namespace PhaserArray.RestrictedItems
 		public void CheckInventory(UnturnedPlayer player)
 		{
 			var clothing = player.Player.clothing;
-			
+
 			if (!CanUseItem(player, clothing.backpack))
 			{
 				clothing.askWearBackpack(0, 0, new byte[0], true);
@@ -182,15 +183,15 @@ namespace PhaserArray.RestrictedItems
 				{
 					if (!CanUseItem(player, player.Inventory.getItem(page, index).item.id))
 					{
+						UnturnedChat.Say(player, Translate("restricteditem_removed", UnturnedItems.GetItemAssetById(player.Inventory.getItem(page, index).item.id).itemName), Color.red);
 						player.Inventory.removeItem(page, index);
-						UnturnedChat.Say(player, Translate("restricteditem_removed", UnturnedItems.GetItemAssetById(player.Inventory.getItem(page, index).item.id).itemName, Color.red));
 					}
 				}
 			}
 		}
 
 		public bool CanUseItem(UnturnedPlayer player, ushort ID)
-		{
+		{ 
 			if (player.IsAdmin || player.HasPermission(Config.ExemptPermission))
 			{
 				return true;
