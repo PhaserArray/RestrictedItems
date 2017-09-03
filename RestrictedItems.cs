@@ -111,7 +111,7 @@ namespace PhaserArray.RestrictedItems
 					Thread.CurrentThread.IsBackground = true;
 					// Okay so this could also work without the delay as long as it is in another thread?
 					// No clue why this is the case, but I'll leave the delay in for safety?
-					Thread.Sleep(10);
+					Thread.Sleep(30);
 
 					var clothing = player.Player.clothing;
 					switch (wear)
