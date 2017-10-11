@@ -6,6 +6,8 @@ namespace PhaserArray.RestrictedItems
 {
 	public class RestrictedItemsConfiguration : IRocketPluginConfiguration
 	{
+		public float RemoveDelay;
+
 		public bool UnlistedAreRestricted;
 		public string ExemptPermission;
 
@@ -14,6 +16,8 @@ namespace PhaserArray.RestrictedItems
 			
 		public void LoadDefaults()
 		{
+			RemoveDelay = 5.0f;
+
 			UnlistedAreRestricted = false;
 			ExemptPermission = "restricteditems.exempt";
 
