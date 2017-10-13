@@ -231,10 +231,6 @@ namespace PhaserArray.RestrictedItems
 		/// <returns></returns>
 		public bool CanUseItem(UnturnedPlayer player, ushort id)
 		{
-			if (IsExempt(player))
-			{
-				return true;
-			}
 			if (IsRestrictedItem(id))
 			{
 				List<List<string>> PermissionGroups;
