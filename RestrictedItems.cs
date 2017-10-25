@@ -46,8 +46,10 @@ namespace PhaserArray.RestrictedItems
 						}
 						else
 						{
-							var toBeAdded = new List<List<string>>();
-							toBeAdded.Add(PermissionGroup.Permissions.ConvertAll(s => s.ToLower()));
+							var toBeAdded = new List<List<string>>
+							{
+								PermissionGroup.Permissions.ConvertAll(s => s.ToLower())
+							};
 							AllRestrictedItems.Add(ID, toBeAdded);
 						}
 					}
@@ -233,8 +235,7 @@ namespace PhaserArray.RestrictedItems
 		{
 			if (IsRestrictedItem(id))
 			{
-				List<List<string>> PermissionGroups;
-				if (AllRestrictedItems.TryGetValue(id, out PermissionGroups))
+				if (AllRestrictedItems.TryGetValue(id, out List<List<string>> PermissionGroups))
 				{
 					foreach (var PermissionGroup in PermissionGroups)
 					{
